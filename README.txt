@@ -1,114 +1,145 @@
 # KeepStock XPTN - Inventory Management System
 
-## Overview
-KeepStock XPTN is a modern inventory management system designed for efficient warehouse operations. It supports multiple user roles, branch management, and comprehensive inventory tracking.
+## Database Setup
 
-## Features
-- Multi-role user system (Store, Manager, Admin)
-- Real-time inventory tracking
-- Box management system with categories (A/B/C)
-- Activity logging and analytics
-- CSV data import/export
-- Branch-specific inventory management
-- Print-ready box labels
+### MySQL Tables Structure
 
-## Tech Stack
-- Frontend: React + Vite
-- Styling: Tailwind CSS
-- State Management: Zustand
-- Icons: Lucide React
-- Charts: Chart.js
-- Routing: React Router
-
-## Prerequisites
-- Node.js 18.0 or higher
-- npm 9.0 or higher
-
-## Local Development Setup
-1. Clone the repository
-```bash
-git clone [repository-url]
-cd keepstock-xptn
+1. users
+```sql
+CREATE TABLE users (
+  id VARCHAR(36) PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  role ENUM('store', 'manager', 'admin') NOT NULL,
+  branch VARCHAR(50),
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-2. Install dependencies
-```bash
-npm install
+2. boxes
+```sql
+CREATE TABLE boxes (
+  id VARCHAR(36) PRIMARY KEY,
+  number VARCHAR(20) NOT NULL,
+  category ENUM('A', 'B', 'C') NOT NULL,
+  branch VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_box_number (number, branch)
+);
 ```
 
-3. Start development server
-```bash
-npm run dev
+3. box_items
+```sql
+CREATE TABLE box_items (
+  id VARCHAR(36) PRIMARY KEY,
+  box_id VARCHAR(36) NOT NULL,
+  sku VARCHAR(50) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  quantity INT NOT NULL,
+  price DECIMAL(12,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (box_id) REFERENCES boxes(id),
+  UNIQUE KEY unique_box_sku (box_id, sku)
+);
 ```
 
-## Production Deployment Guide
-
-### 1. Build the Application
-```bash
-npm run build
-```
-This creates a `dist` folder with production-ready files.
-
-### 2. Web Hosting Setup
-
-#### Option A: Static Hosting (Recommended)
-1. Choose a static hosting provider (Netlify, Vercel, etc.)
-2. Upload the contents of the `dist` folder
-3. Configure redirects for SPA routing:
-
-Create a `_redirects` file in the `public` folder:
-```
-/* /index.html 200
+4. products
+```sql
+CREATE TABLE products (
+  sku VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(12,2) NOT NULL,
+  rack_number VARCHAR(20) NOT NULL,
+  branch VARCHAR(50) NOT NULL,
+  stock_new INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### Option B: Traditional Web Hosting
-1. Upload the `dist` folder contents to your web server
-2. Configure your web server:
-
-Apache (.htaccess):
-```apache
-RewriteEngine On
-RewriteBase /
-RewriteRule ^index\.html$ - [L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
+5. activity_logs
+```sql
+CREATE TABLE activity_logs (
+  id VARCHAR(36) PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  branch VARCHAR(50) NOT NULL,
+  action ENUM('input', 'refill', 'update', 'login', 'logout', 'csv_upload') NOT NULL,
+  details TEXT NOT NULL,
+  sku VARCHAR(50),
+  box_id VARCHAR(36),
+  category ENUM('A', 'B', 'C'),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-Nginx (nginx.conf):
-```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
+## Deployment Instructions
+
+1. Database Setup
+   - Create MySQL database named 'keepstock_db'
+   - Import SQL schema from `database/schema.sql`
+   - Create database user and set permissions
+
+2. Project Files
+   - Upload all files to public_html/keepstock directory
+   - Ensure node_modules is excluded
+   - Set proper file permissions (755 for directories, 644 for files)
+
+3. Environment Setup
+   - Create .env file in project root
+   - Configure database connection:
+     ```
+     DB_HOST=localhost
+     DB_USER=your_db_user
+     DB_PASSWORD=your_db_password
+     DB_NAME=keepstock_db
+     ```
+
+4. Build Process
+   ```bash
+   npm install
+   npm run build
+   ```
+
+5. Web Server Configuration
+   - Configure Apache/Nginx for SPA routing
+   - Set up SSL certificate
+   - Configure proper CORS headers
+
+## Project Structure
+
+```
+keepstock-xptn/
+├── src/
+│   ├── components/    # Reusable UI components
+│   ├── pages/         # Page components
+│   ├── store/         # Zustand state management
+│   ├── types/         # TypeScript type definitions
+│   └── config/        # Configuration files
+├── public/            # Static assets
+└── database/          # SQL schema and migrations
 ```
 
-### 3. Environment Setup
-Create environment variables for production:
-- VITE_API_URL: Your API endpoint
-- Other necessary environment variables
+## Maintenance Guide
 
-### 4. Post-Deployment
-1. Verify all routes work correctly
-2. Test user authentication
-3. Confirm data persistence
-4. Check branch-specific features
-5. Validate CSV import/export
+1. Adding New Features
+   - Follow existing component patterns
+   - Update types in types/index.ts
+   - Add new store methods as needed
+   - Test thoroughly before deployment
 
-## Security Considerations
-- Enable HTTPS
-- Set up proper CORS headers
-- Implement rate limiting
-- Configure CSP headers
-- Regular security audits
+2. Database Changes
+   - Create migration files in database/migrations
+   - Test migrations in development first
+   - Backup production database before applying
 
-## Maintenance
-- Regular backups of data
-- Monitor error logs
-- Update dependencies
-- Performance monitoring
+3. User Management
+   - Use admin panel to manage users
+   - Ensure proper role assignments
+   - Regular security audits
 
-## Support
-For technical support or questions:
-- Email: support@keepstock.com
-- Documentation: [docs-url]
-- Issue Tracker: [issues-url]
+4. Troubleshooting
+   - Check server logs
+   - Verify database connections
+   - Monitor error tracking
+   - Regular backups
