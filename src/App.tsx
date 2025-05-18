@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import AppLayout from './components/Layout/AppLayout';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import InputProduct from './pages/InputProduct';
 import RefillStock from './pages/RefillStock';
@@ -36,7 +37,6 @@ const ProtectedRoute: React.FC<{
 function App() {
   const { isAuthenticated } = useAuthStore();
   
-  // Check for system color scheme preference on initial load
   useEffect(() => {
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       document.documentElement.classList.add('dark');
@@ -50,6 +50,12 @@ function App() {
         <Routes>
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/" replace /> : <Login />
+          } />
+          
+          <Route path="/register" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Register />
+            </ProtectedRoute>
           } />
           
           <Route path="/" element={
